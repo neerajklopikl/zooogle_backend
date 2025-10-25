@@ -8,7 +8,6 @@ const transactionRoutes = require('./routes/transactionRoutes');
 const masterRoutes = require('./routes/masterRoutes');
 const dataRoutes =require('./routes/dataRoutes');
 const reportRoutes = require('./routes/report_routes');
-const hsnSacRoutes = require('./routes/hsnSacRoutes');
 
 // Load environment variables from .env file
 dotenv.config();
@@ -33,7 +32,6 @@ app.use('/api/transactions', transactionRoutes);
 app.use('/api/masters', masterRoutes);
 app.use('/api/data', dataRoutes);
 app.use('/api/reports', reportRoutes);
-app.use('/api/hsn-sac', hsnSacRoutes);
 
 // Define a simple route for the root
 app.get('/', (req, res) => {
