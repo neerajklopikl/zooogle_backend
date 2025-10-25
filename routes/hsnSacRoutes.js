@@ -7,4 +7,3 @@ const { getHsnSacCodes } = require('../controllers/hsnSacController');
 router.get('/', getHsnSacCodes);
 
 module.exports = router;
-
