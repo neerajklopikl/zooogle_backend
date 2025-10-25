@@ -1,9 +1,12 @@
 const express = require('express');
 const router = express.Router();
-const { getHsnSacCodes } = require('../controllers/hsnSacController');
+// Import both controller functions
+const { getHsnSacCodes, getHsnSacPdf } = require('../controllers/hsnSacController');
 
-// This line creates the API endpoint. When a GET request is made to '/api/hsn-sac/',
-// it will execute the getHsnSacCodes function from the controller.
+// This route serves the JSON data
 router.get('/', getHsnSacCodes);
+
+// This new route serves the PDF document
+router.get('/pdf', getHsnSacPdf);
 
 module.exports = router;

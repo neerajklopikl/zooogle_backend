@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const csv = require('csv-parser');
+const PDFDocument = require('pdfkit'); // Import the PDF library
 
 /**
  * Reads a CSV file from the given path and returns its content as a promise.
@@ -38,38 +39,131 @@ const readCsv = (filePath) => {
 };
 
 /**
- * @desc    Get all HSN and SAC codes by reading and combining two CSV files.
+ * @desc    Get all HSN and SAC codes as JSON.
  * @route   GET /api/hsn-sac
  * @access  Public
  */
 exports.getHsnSacCodes = async (req, res) => {
     try {
-        // Define the full paths to the CSV files within the 'data' directory
+        // Define the full paths to the CSV files
         const hsnPath = path.join(__dirname, '..', 'data', 'HSN_MSTR.csv');
         const sacPath = path.join(__dirname, '..', 'data', 'SAC_MSTR.csv');
 
-        // Before trying to read, check if the files physically exist on the server
+        // Check if the files exist
         if (!fs.existsSync(hsnPath) || !fs.existsSync(sacPath)) {
             const message = 'HSN_MSTR.csv or SAC_MSTR.csv not found in the `zooogle_backend/data` directory.';
             console.error(message);
             return res.status(500).json({ message });
         }
         
-        // Read both files concurrently for better performance
+        // Read both files
         const [hsnCodes, sacCodes] = await Promise.all([
             readCsv(hsnPath),
             readCsv(sacPath)
         ]);
 
-        // Combine the results from both files into a single array
+        // Combine the results
         const allCodes = [...hsnCodes, ...sacCodes];
         
-        // Send the combined list back to the Flutter app as a JSON response
+        // Send the combined list as a JSON response
         res.status(200).json(allCodes);
 
     } catch (error) {
-        // If any error occurs during the process, log it and send a server error response
+        // Handle errors
         console.error('Error processing HSN/SAC CSV files:', error);
         res.status(500).json({ message: 'Server error while fetching HSN/SAC codes' });
+    }
+};
+
+/**
+ * @desc    Get all HSN and SAC codes as a PDF document.
+ * @route   GET /api/hsn-sac/pdf
+ * @access  Public
+ */
+exports.getHsnSacPdf = async (req, res) => {
+    try {
+        // Define the full paths to the CSV files
+        const hsnPath = path.join(__dirname, '..', 'data', 'HSN_MSTR.csv');
+        const sacPath = path.join(__dirname, '..', 'data', 'SAC_MSTR.csv');
+
+        // Check if the files exist
+        if (!fs.existsSync(hsnPath) || !fs.existsSync(sacPath)) {
+            const message = 'HSN_MSTR.csv or SAC_MSTR.csv not found in the `zooogle_backend/data` directory.';
+            console.error(message);
+            return res.status(500).json({ message });
+        }
+
+        // Read both files
+        const [hsnCodes, sacCodes] = await Promise.all([
+            readCsv(hsnPath),
+            readCsv(sacPath)
+        ]);
+
+        // --- Create PDF ---
+        const doc = new PDFDocument({ margin: 50, size: 'A4' });
+
+        // Set headers to trigger PDF download
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', 'attachment; filename=HSN_SAC_Codes.pdf');
+
+        // Pipe the PDF directly to the response
+        doc.pipe(res);
+
+        // Add a title
+        doc.fontSize(18).text('HSN and SAC Codes', { align: 'center' });
+        doc.moveDown(2);
+
+        // --- HSN Codes Section ---
+        doc.fontSize(16).font('Helvetica-Bold').text('HSN Codes', { underline: true });
+        doc.moveDown();
+
+        // Add HSN Table Header
+        doc.fontSize(10).font('Helvetica-Bold');
+        doc.text('Code', 50, doc.y, { width: 100, continued: true });
+        doc.text('Description', 150, doc.y);
+        doc.moveDown();
+        doc.font('Helvetica'); // Reset font
+
+        // Add HSN Data
+        for (const item of hsnCodes) {
+            // Check if we need to add a new page
+            if (doc.y > 700) {
+                doc.addPage();
+            }
+            doc.text(item.code, 50, doc.y, { width: 100, continued: true });
+            doc.text(item.description, 150, doc.y, { width: 400 });
+            doc.moveDown(0.5);
+        }
+
+        // --- SAC Codes Section ---
+        doc.addPage();
+        doc.fontSize(16).font('Helvetica-Bold').text('SAC Codes', { underline: true });
+        doc.moveDown();
+
+        // Add SAC Table Header
+        doc.fontSize(10).font('Helvetica-Bold');
+        doc.text('Code', 50, doc.y, { width: 100, continued: true });
+        doc.text('Description', 150, doc.y);
+        doc.moveDown();
+        doc.font('Helvetica'); // Reset font
+
+        // Add SAC Data
+        for (const item of sacCodes) {
+            // Check if we need to add a new page
+            if (doc.y > 700) {
+                doc.addPage();
+            }
+            doc.text(item.code, 50, doc.y, { width: 100, continued: true });
+            doc.text(item.description, 150, doc.y, { width: 400 });
+            doc.moveDown(0.5);
+        }
+
+        // Finalize the PDF
+        doc.end();
+
+    } catch (error) {
+        // Handle errors
+        console.error('Error generating HSN/SAC PDF:', error);
+        res.status(500).send('Server error while generating PDF');
     }
 };
