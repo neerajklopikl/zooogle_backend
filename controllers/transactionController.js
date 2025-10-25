@@ -46,6 +46,9 @@ exports.createTransaction = async (req, res) => {
         const enrichedItems = [];
         if (items && items.length > 0) {
             for (const transactionItem of items) {
+                if (!transactionItem.item) {
+                    throw new Error('Each item in the transaction must have an item ID.');
+                }
                 const itemDetails = await Item.findById(transactionItem.item).session(session);
                 if (!itemDetails) {
                     throw new Error(`Item with ID ${transactionItem.item} not found.`);
