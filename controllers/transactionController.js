@@ -1,30 +1,18 @@
-// zooogle_backend/controllers/transactionController.js
-
 const Transaction = require('../models/Transaction');
 const Item = require('../models/Item');
 const Party = require('../models/Party');
 const mongoose = require('mongoose');
 
-// --- NEW FUNCTION ---
-/**
- * @desc    Get the next available transaction number for a given type
- * @route   GET /api/transactions/next-number/:type
- * @access  Private
- */
 exports.getNextTransactionNumber = async (req, res) => {
     try {
         const { type } = req.params;
-        
-        // Find the most recent transaction of the specified type that has a numeric transactionNumber
         const lastTransaction = await Transaction.findOne(
             { 
                 type: type,
-                // Ensure we only consider documents where transactionNumber is a string
-                // that can be converted to a number.
                 transactionNumber: { $exists: true, $ne: "" } 
             }
         )
-        .sort({ createdAt: -1 }) // Sort by creation date to get the last one
+        .sort({ createdAt: -1 })
         .limit(1);
 
         let nextNumber = 1;
@@ -42,21 +30,17 @@ exports.getNextTransactionNumber = async (req, res) => {
         res.status(500).json({ message: 'Server Error', error: error.message });
     }
 };
-// --- END NEW FUNCTION ---
 
-
-/**
- * @desc    Create a new transaction
- * @route   POST /api/transactions
- * @access  Private
- */
 exports.createTransaction = async (req, res) => {
     const companyStateCode = process.env.COMPANY_STATE_CODE;
-
     const session = await mongoose.startSession();
     session.startTransaction();
     try {
         const { type, partyId, items, ...otherDetails } = req.body;
+
+        if (!req.user || !req.user.company_code) {
+            throw new Error('Authentication error: Company information not found.');
+        }
 
         if (!type || !otherDetails.totalAmount || !otherDetails.transactionNumber) {
             await session.abortTransaction();
@@ -84,6 +68,7 @@ exports.createTransaction = async (req, res) => {
 
                 if (transactionItem.name && !transactionItem.item) {
                     const newItem = new Item({
+                        company_code: req.user.company_code, // <-- FINAL FIX
                         name: transactionItem.name,
                         category: transactionItem.category || null,
                         itemCode: transactionItem.itemCode || null,
@@ -163,12 +148,6 @@ exports.createTransaction = async (req, res) => {
     }
 };
 
-
-/**
- * @desc    Get all transactions with filtering
- * @route   GET /api/transactions
- * @access  Private
- */
 exports.getAllTransactions = async (req, res) => {
     try {
         const { type, partyId, startDate, endDate } = req.query;
@@ -198,11 +177,6 @@ exports.getAllTransactions = async (req, res) => {
     }
 };
 
-/**
- * @desc    Get a single transaction by ID
- * @route   GET /api/transactions/:id
- * @access  Private
- */
 exports.getTransactionById = async (req, res) => {
     try {
         const transaction = await Transaction.findById(req.params.id).populate('party').populate('items.item');
@@ -215,11 +189,6 @@ exports.getTransactionById = async (req, res) => {
     }
 };
 
-/**
- * @desc    Update a transaction
- * @route   PUT /api/transactions/:id
- * @access  Private
- */
 exports.updateTransaction = async (req, res) => {
     try {
         const updatedTransaction = await Transaction.findByIdAndUpdate(req.params.id, req.body, { new: true });
@@ -232,11 +201,6 @@ exports.updateTransaction = async (req, res) => {
     }
 };
 
-/**
- * @desc    Delete a transaction
- * @route   DELETE /api/transactions/:id
- * @access  Private
- */
 exports.deleteTransaction = async (req, res) => {
     const session = await mongoose.startSession();
     session.startTransaction();
@@ -267,11 +231,6 @@ exports.deleteTransaction = async (req, res) => {
     }
 };
 
-/**
- * @desc    Convert a Quotation (Estimate) to a Sale (Invoice)
- * @route   POST /api/transactions/:id/convert
- * @access  Private
- */
 exports.convertQuotationToInvoice = async (req, res) => {
     const session = await mongoose.startSession();
     session.startTransaction();
