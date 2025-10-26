@@ -3,7 +3,6 @@ const Item = require('../models/Item');
 const Party = require('../models/Party');
 const mongoose = require('mongoose');
 
-// Get the next transaction number
 exports.getNextTransactionNumber = async (req, res) => {
     try {
         const { type } = req.params;
@@ -25,7 +24,6 @@ exports.getNextTransactionNumber = async (req, res) => {
     }
 };
 
-// Create a new transaction
 exports.createTransaction = async (req, res) => {
     const session = await mongoose.startSession();
     session.startTransaction();
@@ -38,7 +36,7 @@ exports.createTransaction = async (req, res) => {
             type,
             party: partyId,
             company_code,
-            items: [], // Items will be processed and added below
+            items: [], 
         });
 
         if (items && items.length > 0) {
@@ -48,7 +46,7 @@ exports.createTransaction = async (req, res) => {
                     item = new Item({
                         name: transactionItem.name,
                         company_code: company_code,
-                        salePrice: transactionItem.rate,
+                        salePrice: transactionItem.rate, 
                     });
                     await item.save({ session });
                 }
@@ -77,7 +75,6 @@ exports.createTransaction = async (req, res) => {
     }
 };
 
-// Get all transactions for the company
 exports.getAllTransactions = async (req, res) => {
     try {
         const { company_code } = req.user;
@@ -90,7 +87,6 @@ exports.getAllTransactions = async (req, res) => {
     }
 };
 
-// Get a single transaction
 exports.getTransactionById = async (req, res) => {
     try {
         const { company_code } = req.user;
@@ -105,7 +101,6 @@ exports.getTransactionById = async (req, res) => {
     }
 };
 
-// Update a transaction
 exports.updateTransaction = async (req, res) => {
     try {
         const { company_code } = req.user;
@@ -123,7 +118,6 @@ exports.updateTransaction = async (req, res) => {
     }
 };
 
-// Delete a transaction
 exports.deleteTransaction = async (req, res) => {
     try {
         const { company_code } = req.user;

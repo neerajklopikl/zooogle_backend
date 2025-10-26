@@ -13,7 +13,7 @@ const itemSchema = new mongoose.Schema({
     hsnCode: { type: String, trim: true },
 }, { timestamps: true });
 
-// This index enforces that the combination of company_code and name is unique.
+// Enforce that an item's name must be unique within a specific company.
 itemSchema.index({ company_code: 1, name: 1 }, { unique: true });
 
 module.exports = mongoose.model('Item', itemSchema);
