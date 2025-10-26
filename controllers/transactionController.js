@@ -56,7 +56,7 @@ exports.createTransaction = async (req, res) => {
 
         if (items && items.length > 0) {
             
-            // --- CHANGE START: Replaced the old loop with this one ---
+            // --- THIS IS THE FIX: Using findOneAndUpdate ---
 
             // We process all item updates atomically
             for (const transactionItem of items) {
@@ -68,9 +68,9 @@ exports.createTransaction = async (req, res) => {
                 // If the item doesn't exist, `upsert: true` creates it.
                 const item = await Item.findOneAndUpdate(
                     // Filter: Find item by name and company
-                    { name: transactionItem.name, company_code: company_code }, 
+                    { name: transactionItem.name, company_code: company_code },
                     // Update:
-                    { 
+                    {
                         $inc: { stock: stockChange }, // Always update the stock
                         $setOnInsert: { // Fields to set ONLY if a new item is created
                             company_code: company_code,
@@ -80,7 +80,7 @@ exports.createTransaction = async (req, res) => {
                         }
                     },
                     // Options:
-                    { 
+                    {
                         upsert: true, // IMPORTANT: Creates the document if it doesn't exist
                         new: true, // Returns the modified (or new) document
                         session: session, // Ensures this operation is part of the transaction
@@ -95,7 +95,7 @@ exports.createTransaction = async (req, res) => {
                     rate: transactionItem.rate,
                 });
             }
-            // --- CHANGE END ---
+            // --- END OF FIX ---
         }
 
         await newTransaction.save({ session });
@@ -145,8 +145,8 @@ exports.updateTransaction = async (req, res) => {
     try {
         const { company_code } = req.user;
         const updatedTransaction = await Transaction.findOneAndUpdate(
-            { _id: req.params.id, company_code }, 
-            req.body, 
+            { _id: req.params.id, company_code },
+            req.body,
             { new: true }
         );
         if (!updatedTransaction) {
