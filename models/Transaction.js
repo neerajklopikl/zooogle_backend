@@ -1,6 +1,10 @@
 const mongoose = require('mongoose');
 
 const transactionSchema = new mongoose.Schema({
+    company_code: {
+        type: String,
+        required: true,
+    },
     type: {
         type: String,
         required: true,
@@ -18,7 +22,7 @@ const transactionSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Transaction'
     },
-    transactionNumber: { type: String, required: true, unique: true },
+    transactionNumber: { type: String, required: true }, // No longer globally unique
     party: { type: mongoose.Schema.Types.ObjectId, ref: 'Party' },
     partyGstin: { type: String }, 
     items: [{
@@ -35,5 +39,8 @@ const transactionSchema = new mongoose.Schema({
     balanceDue: { type: Number, default: 0 },
     transactionDate: { type: Date, default: Date.now },
 }, { timestamps: true });
+
+// Correctly enforces that the transaction number is unique for each type within each company
+transactionSchema.index({ company_code: 1, type: 1, transactionNumber: 1 }, { unique: true });
 
 module.exports = mongoose.model('Transaction', transactionSchema);

@@ -27,6 +27,14 @@ exports.createParty = async (req, res) => {
         const savedParty = await newParty.save();
         res.status(201).json(savedParty);
     } catch (error) {
+        // --- NEW: Better error handling for duplicates ---
+        if (error.code === 11000) {
+            // The E11000 error code indicates a duplicate key violation
+            return res.status(409).json({ 
+                message: 'Failed to create party.', 
+                error: `A party with the name "${req.body.name}" already exists.` 
+            });
+        }
         res.status(500).json({ message: 'Server Error', error: error.message });
     }
 };

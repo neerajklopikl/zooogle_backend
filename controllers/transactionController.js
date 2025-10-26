@@ -1,28 +1,40 @@
 const Transaction = require('../models/Transaction');
 const Item = require('../models/Item');
 const Party = require('../models/Party');
+const Counter = require('../models/Counter'); // <-- NEW: Import the counter
 const mongoose = require('mongoose');
 
+// --- NEW: Atomic Counter Function ---
+async function getNextSequenceValue(sequenceName) {
+    const sequenceDocument = await Counter.findByIdAndUpdate(
+        sequenceName, 
+        { $inc: { sequence_value: 1 } },
+        { new: true, upsert: true } // `new` returns the updated doc, `upsert` creates it if it doesn't exist
+    );
+    return sequenceDocument.sequence_value;
+}
+
+// --- UPDATED: To use the new atomic counter ---
 exports.getNextTransactionNumber = async (req, res) => {
     try {
         const { type } = req.params;
         const { company_code } = req.user;
-        
-        const lastTransaction = await Transaction.findOne({ type, company_code })
-            .sort({ createdAt: -1 });
 
-        let nextNumber = 1;
-        if (lastTransaction && lastTransaction.transactionNumber) {
-            const lastNum = parseInt(lastTransaction.transactionNumber, 10);
-            if (!isNaN(lastNum)) {
-                nextNumber = lastNum + 1;
-            }
-        }
+        // The sequence name is a combination of the company and transaction type
+        const sequenceName = `${type}_${company_code}`;
+
+        const nextNumber = await getNextSequenceValue(sequenceName);
+
         res.status(200).json({ nextNumber: nextNumber.toString() });
+
     } catch (error) {
+        console.error('Error getting next transaction number:', error);
         res.status(500).json({ message: 'Server Error', error: error.message });
     }
 };
+
+
+// --- The rest of your controller remains largely the same, but does not need to handle number generation ---
 
 exports.createTransaction = async (req, res) => {
     const session = await mongoose.startSession();
@@ -31,12 +43,17 @@ exports.createTransaction = async (req, res) => {
         const { type, partyId, items, ...otherDetails } = req.body;
         const { company_code } = req.user;
 
+        // The transaction number is now expected to be correct from the frontend
+        if (!type || !otherDetails.totalAmount || !otherDetails.transactionNumber) {
+             return res.status(400).json({ message: 'Client error: transactionNumber is missing.' });
+        }
+
         const newTransaction = new Transaction({
             ...otherDetails,
             type,
             party: partyId,
             company_code,
-            items: [], 
+            items: [],
         });
 
         if (items && items.length > 0) {
@@ -46,17 +63,15 @@ exports.createTransaction = async (req, res) => {
                     item = new Item({
                         name: transactionItem.name,
                         company_code: company_code,
-                        salePrice: transactionItem.rate, 
+                        salePrice: transactionItem.rate,
                     });
                     await item.save({ session });
                 }
-
                 newTransaction.items.push({
                     item: item._id,
                     quantity: transactionItem.quantity,
                     rate: transactionItem.rate,
                 });
-
                 const stockChange = (type === 'sale' || type === 'purchaseReturn') ? -transactionItem.quantity : transactionItem.quantity;
                 await Item.findByIdAndUpdate(item._id, { $inc: { stock: stockChange } }, { session });
             }
