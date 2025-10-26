@@ -43,14 +43,12 @@ exports.createTransaction = async (req, res) => {
 
         if (items && items.length > 0) {
             for (const transactionItem of items) {
-                // Create or find item scoped to the company
                 let item = await Item.findOne({ name: transactionItem.name, company_code }).session(session);
                 if (!item) {
                     item = new Item({
                         name: transactionItem.name,
                         company_code: company_code,
-                        salePrice: transactionItem.rate, // Assuming rate is sale price
-                        // ... other item fields you might want to set
+                        salePrice: transactionItem.rate,
                     });
                     await item.save({ session });
                 }
@@ -59,10 +57,8 @@ exports.createTransaction = async (req, res) => {
                     item: item._id,
                     quantity: transactionItem.quantity,
                     rate: transactionItem.rate,
-                    // ... any other line-item specific fields
                 });
 
-                // Update stock
                 const stockChange = (type === 'sale' || type === 'purchaseReturn') ? -transactionItem.quantity : transactionItem.quantity;
                 await Item.findByIdAndUpdate(item._id, { $inc: { stock: stockChange } }, { session });
             }
@@ -109,5 +105,34 @@ exports.getTransactionById = async (req, res) => {
     }
 };
 
-// ... other controller functions (update, delete) would also need to be updated
-// to be company-aware in a similar fashion.
+// Update a transaction
+exports.updateTransaction = async (req, res) => {
+    try {
+        const { company_code } = req.user;
+        const updatedTransaction = await Transaction.findOneAndUpdate(
+            { _id: req.params.id, company_code }, 
+            req.body, 
+            { new: true }
+        );
+        if (!updatedTransaction) {
+            return res.status(404).json({ message: 'Transaction not found' });
+        }
+        res.status(200).json(updatedTransaction);
+    } catch (error) {
+        res.status(500).json({ message: 'Server Error', error: error.message });
+    }
+};
+
+// Delete a transaction
+exports.deleteTransaction = async (req, res) => {
+    try {
+        const { company_code } = req.user;
+        const deletedTransaction = await Transaction.findOneAndDelete({ _id: req.params.id, company_code });
+        if (!deletedTransaction) {
+            return res.status(404).json({ message: 'Transaction not found' });
+        }
+        res.status(200).json({ message: 'Transaction deleted successfully' });
+    } catch (error) {
+        res.status(500).json({ message: 'Server Error', error: error.message });
+    }
+};
