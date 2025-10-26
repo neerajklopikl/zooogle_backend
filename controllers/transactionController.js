@@ -42,7 +42,6 @@ exports.createTransaction = async (req, res) => {
                 let itemDetails;
                 let itemId;
 
-                // If the item has a 'name' but no 'item' ID, it's a new item.
                 if (transactionItem.name && !transactionItem.item) {
                     const newItem = new Item({
                         name: transactionItem.name,
@@ -84,7 +83,7 @@ exports.createTransaction = async (req, res) => {
                 
                 enrichedItems.push({
                     ...transactionItem,
-                    item: itemId, // Ensure the final item ID is stored
+                    item: itemId, 
                     gstRate: itemDetails.gstRate,
                     hsnCode: itemDetails.hsnCode,
                     taxableValue: taxableValue, 
@@ -237,7 +236,7 @@ exports.convertQuotationToInvoice = async (req, res) => {
     const session = await mongoose.startSession();
     session.startTransaction();
     try {
-        const quotation = await Transaction.findById(req.params.id).session(session);
+        const quotation = await Transaction.findById(.params.id).session(session);
 
         if (!quotation) {
             await session.abortTransaction();
