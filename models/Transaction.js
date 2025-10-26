@@ -22,7 +22,7 @@ const transactionSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Transaction'
     },
-    transactionNumber: { type: String, required: true }, // No longer globally unique
+    transactionNumber: { type: String, required: true }, // This is the correct field
     party: { type: mongoose.Schema.Types.ObjectId, ref: 'Party' },
     partyGstin: { type: String }, 
     items: [{
@@ -40,7 +40,9 @@ const transactionSchema = new mongoose.Schema({
     transactionDate: { type: Date, default: Date.now },
 }, { timestamps: true });
 
-// Correctly enforces that the transaction number is unique for each type within each company
+// THIS IS THE FIX:
+// It correctly enforces that the transaction number is unique 
+// for each type within each company.
 transactionSchema.index({ company_code: 1, type: 1, transactionNumber: 1 }, { unique: true });
 
 module.exports = mongoose.model('Transaction', transactionSchema);
