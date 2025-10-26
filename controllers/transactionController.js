@@ -236,7 +236,7 @@ exports.convertQuotationToInvoice = async (req, res) => {
     const session = await mongoose.startSession();
     session.startTransaction();
     try {
-        const quotation = await Transaction.findById(.params.id).session(session);
+        const quotation = await Transaction.findById(req.params.id).session(session);
 
         if (!quotation) {
             await session.abortTransaction();
