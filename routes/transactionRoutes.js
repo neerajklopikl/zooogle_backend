@@ -7,8 +7,13 @@ const {
     getTransactionById,
     updateTransaction,
     deleteTransaction,
-    convertQuotationToInvoice 
+    convertQuotationToInvoice, // Make sure this is exported from your controller
+    getNextTransactionNumber // And this one too
 } = require('../controllers/transactionController');
+
+// --- NEW ROUTE ---
+// This route MUST be defined before the /:id route to avoid conflicts
+router.route('/next-number/:type').get(getNextTransactionNumber);
 
 // Routes for getting all transactions and creating a new one
 router.route('/')

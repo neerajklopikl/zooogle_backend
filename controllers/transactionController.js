@@ -5,6 +5,46 @@ const Item = require('../models/Item');
 const Party = require('../models/Party');
 const mongoose = require('mongoose');
 
+// --- NEW FUNCTION ---
+/**
+ * @desc    Get the next available transaction number for a given type
+ * @route   GET /api/transactions/next-number/:type
+ * @access  Private
+ */
+exports.getNextTransactionNumber = async (req, res) => {
+    try {
+        const { type } = req.params;
+        
+        // Find the most recent transaction of the specified type that has a numeric transactionNumber
+        const lastTransaction = await Transaction.findOne(
+            { 
+                type: type,
+                // Ensure we only consider documents where transactionNumber is a string
+                // that can be converted to a number.
+                transactionNumber: { $exists: true, $ne: "" } 
+            }
+        )
+        .sort({ createdAt: -1 }) // Sort by creation date to get the last one
+        .limit(1);
+
+        let nextNumber = 1;
+        if (lastTransaction && lastTransaction.transactionNumber) {
+            const lastNum = parseInt(lastTransaction.transactionNumber, 10);
+            if (!isNaN(lastNum)) {
+                nextNumber = lastNum + 1;
+            }
+        }
+
+        res.status(200).json({ nextNumber: nextNumber.toString() });
+
+    } catch (error) {
+        console.error('Error getting next transaction number:', error);
+        res.status(500).json({ message: 'Server Error', error: error.message });
+    }
+};
+// --- END NEW FUNCTION ---
+
+
 /**
  * @desc    Create a new transaction
  * @route   POST /api/transactions
